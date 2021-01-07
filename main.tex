@@ -20,7 +20,7 @@ sorting=none
 
 \title{ECE532S Digital Systems Design \\ \vspace{0.4cm}
        \Large Tutorial 4 - Debugging on Board Using the ILA \\ \vspace{0.4cm}
-       \small Last Updated: July, 2019}
+       \small Last Updated: Jan, 2021}
 \author{ }
 \date{ }
 
@@ -48,7 +48,7 @@ The \textit{Integrated Logic Analyzer}, or \textit{ILA} for short, is a Xilinx d
 \label{sec:mark_as_debug}
 There are two ways in which we can insert an ILA into a project. The first method is an automated insertion methodology used through the annotation of HDL source files, and the second is the actual instantiation of an ILA in IP Integrator view. The ILA Core instantiation will be covered in Section~\ref{sec:ila_core}, and here we will discuss the debug flow available in Vivado for HDL source files.
 
-\textbf{Create} a new Vivado project according to the steps in previous tutorial, making sure to add the \textit{tutorial.v} and \textit{tutorial.xdc} files as a source and constraint file respectively. 
+\textbf{Create} a new Vivado project according to the steps in previous tutorials, making sure to add the \textit{tutorial.v} and \textit{tutorial.xdc} files as a source and constraint file respectively. 
 %Feel free to select the device by part number or by selecting the board file installed in tutorial~3. In any case, we still need to add the constraint file since the board file cannot be used to specify constraints outside of the IP Integrator view. 
 The contents of \textit{tutorial.v} are shown in Figure~\ref{fig:led_shift_app}.
 
@@ -73,7 +73,7 @@ module tutorial (
     );
 
 	wire direct_connect = swt[7];
-	wire [7:0] value_output;
+	wire [7:0] out_value;
 
 	//Counter
 	wire[26:0] count_limit = {swt[6:0],20'd0};
@@ -101,8 +101,8 @@ module tutorial (
 	end
 
 	//Output
-	assign value_output = {direct_connect,led_shift};
-	assign led = value_output;
+	assign out_value = {direct_connect,led_shift};
+	assign led = out_value;
 
 endmodule
 \end{minted}
@@ -111,8 +111,9 @@ endmodule
 \label{fig:led_shift_app}
 \end{figure}
 
+
 \noindent
-The \textit{tutorial} module is the top level module of the project, and it's input and output signal names should match those of the added constraints file. The module takes the switch values as input, and output some value to the LEDs. The most significant switch value is connected directly to the most significant LED, while the other switch are used to determine at which value some counter is to reset. Specifically, the lower 7 bits of the switches determine the number of $2^{20}$ cycles some counter should count to before resetting. Recall that our clock frequency is 100MHz, so a value of 100 on the switches should be approximately one second. Each time the counter resets, the values output to the lower LEDs is rotated to the left by one. In effect, the switches determine the rate at some pattern sifts through the LEDs. The pattern is fixed at 0000001 in binary. Note, the reset signal is active low.
+The \textit{tutorial} module is the top level module of the project, and it's input and output signal names should match those of the added constraints file. The module takes the switch values as input, and output some value to the LEDs. The most significant switch value is connected directly to the most significant LED, while the other switches are used to determine at which value some counter is to reset. Specifically, the lower 7 bits of the switches determine the number of $2^{20}$ cycles some counter should count to before resetting. Recall that our clock frequency is 100MHz, so a value of 100 on the switches should be approximately one second. Each time the counter resets, the values output to the lower LEDs is rotated to the left by one. In effect, the switches determine the rate at which some pattern sifts through the LEDs. The pattern is fixed at 0000001 in binary. Note, the reset signal is active low.
 
 To monitor some of these signals after we download the system onto the FPGA, we need to mark the signals in question \textit{as debug}. There are a number of ways to mark a signal as debug, and we'll cover a few of them. First, we can annotate the HDL itself to mark a wire or register output as debug. For verilog, the notation to mark the signal \textit{direct\_connect} as debug for example is the following:
 
@@ -128,7 +129,7 @@ breaklines,
 \end{minted}
 
 \noindent
-Use this methodology and \textbf{mark} both the signal \textit{direct\_connect} and \textit{value\_output} as debug. Note, marking a signal as debug also prevents Vivado from optimizing a signal away, which can often happen in some of the optimization stages of Synthesis. Now run \textbf{Synthesis} for the project but do not proceed to \textit{Implementation} when \textit{Synthesis} completes. Instead, select \textbf{Synthesis $\rightarrow$ Open Synthesized Design} from the \textit{Flow Navigator} pane on the left side of the Vivado interface. From the drop down menu in the top right of the Vivado interface, select \textbf{Debug} to switch to the debug view (see Figure~\ref{fig:debug_view} for reference).
+Use this methodology and \textbf{mark} both the signal \textit{direct\_connect} and \textit{out\_value} as debug. Note, marking a signal as debug also prevents Vivado from optimizing a signal away, which can often happen in some of the optimization stages of Synthesis. Now run \textbf{Synthesis} for the project but do not proceed to \textit{Implementation} when \textit{Synthesis} completes. Instead, select \textbf{Synthesis $\rightarrow$ Open Synthesized Design} from the \textit{Flow Navigator} pane on the left side of the Vivado interface. From the drop down menu in the top right of the Vivado interface, select \textbf{Debug} to switch to the debug view (see Figure~\ref{fig:debug_view} for reference).
 
 \begin{figure}[!h]
     \centering
@@ -137,7 +138,7 @@ Use this methodology and \textbf{mark} both the signal \textit{direct\_connect} 
     \label{fig:debug_view}
 \end{figure}
 
-You should see the \textit{Debug} tab in the bottom window. Here are listed all nets that have been marked as debug in your design; check to make sure both of the signals we've marked for debug are listed here. See Figure~\ref{fig:debug_list} for reference. Note, the nest are listed under the \textit{Unassigned Debug Nets} heading, since these debug nets have not yet been connected to an \textit{ILA}.
+You should see the \textit{Debug} tab in the bottom window. Here are listed all nets that have been marked as debug in your design; check to make sure both of the signals we've marked for debug are listed here. See Figure~\ref{fig:debug_list} for reference. Note, the nets are listed under the \textit{Unassigned Debug Nets} heading, since these debug nets have not yet been connected to an \textit{ILA}.
 
 \begin{figure}[!h]
     \centering
@@ -146,7 +147,7 @@ You should see the \textit{Debug} tab in the bottom window. Here are listed all 
     \label{fig:debug_list}
 \end{figure}
 
-We can also add more nets to the debug list from the \textit{Open Synthesized Design} view. In the \textbf{Netlist} window on the left, select the \textbf{Netlist} tab to see a list of all of the nets in your design. Note, this will not include any nets that have been optimized away during the recently executed \textit{Synthesis}. You can \textbf{right click} any of the nets listed here and select \textbf{Make Debug} to add the net to the list of debug nets. Find the net corresponding to the \textit{counter} signal and mark it as debug (see Figure~\ref{fig:counter_as_debug}). We should now have a total of three nets listed under the \textit{Unassigned Debug Nets} header in the \textit{Debug} tab. You can also mark a net \textit{as debug} using the TCL Console, though we won't be demonstrating that in thus tutorial
+We can also add more nets to the debug list from the \textit{Open Synthesized Design} view. In the \textbf{Netlist} window on the left, select the \textbf{Netlist} tab to see a list of all of the nets in your design. Note, this will not include any nets that have been optimized away during the recently executed \textit{Synthesis}. You can \textbf{right click} any of the nets listed here and select \textbf{Make Debug} to add the net to the list of debug nets. Find the net corresponding to the \textit{counter} signal and mark it as debug (see Figure~\ref{fig:counter_as_debug}). We should now have a total of three nets listed under the \textit{Unassigned Debug Nets} header in the \textit{Debug} tab. You can also mark a net \textit{as debug} using the TCL Console, though we won't be demonstrating that in this tutorial
 
 \begin{figure}[!h]
     \centering
@@ -170,7 +171,7 @@ In order to connect the nets we've marked as debug, we need to run the \textit{D
 \end{figure}
 
 \newpage
-Click \textbf{Next} to advance to the \textit{ILA Core Options} menu. In this window, we can select the depth of our \textit{ILA} core, i.e. the number of samples of the probe signals that the ILA can store at a time. Also, the \textit{Input pipe stages} setting is important if the ILA is causing timing failures, as increase pipeline registers can ease timing closure for the probed signals. Leave the \textit{Sample of data depth} at \textbf{1024} and click \textbf{Next} and then \textbf{Finish} to complete the \textit{Debug Wizard}. Check the \textit{Debug} tab again to see that an \textit{ILA} core has been added (named \textit{u\_ila\_0}, or something along those lines) that contains all of our debug nets. The \textit{Unassigned Debug Nets} listing should contain no nets at this time. See Figure~\ref{fig:debug_list2} for reference.
+Click \textbf{Next} to advance to the \textit{ILA Core Options} menu. In this window, we can select the depth of our \textit{ILA} core, i.e. the number of samples of the probe signals that the ILA can store at a time. Also, the \textit{Input pipe stages} setting is important if the ILA is causing timing failures, as increasing pipeline registers can ease timing closure for the probed signals. Leave the \textit{Sample of data depth} at \textbf{1024} and click \textbf{Next} and then \textbf{Finish} to complete the \textit{Debug Wizard}. Check the \textit{Debug} tab again to see that an \textit{ILA} core has been added (named \textit{u\_ila\_0}, or something along those lines) that contains all of our debug nets. The \textit{Unassigned Debug Nets} listing should contain no nets at this time. See Figure~\ref{fig:debug_list2} for reference.
 
 \begin{figure}[!h]
     \centering
@@ -184,7 +185,7 @@ Click \textbf{Next} to advance to the \textit{ILA Core Options} menu. In this wi
 
 \section{Using the ILA in Hardware Manager}
 \label{sec:hw_man}
-Now that we've added the \textit{ILAs}, we can save the project, close the \textit{Synthesized Design}, and rerun \textbf{Synthesis}, \textbf{Implementation}, and \textbf{Generate Bitstream} to generate the final bitstream that includes the \textit{ILA}s. Open \textbf{Hardware Manager} and download the bitstream to the FPGA. Note, when selecting a bitstream to program the FPGA, you are also prompted to select a \textit{Debug probes file}. This file contains information about all of the debug cores in the design. This field should be populated automatically to the \textit{probes file} created when you generated the bitstream. See Figure~\ref{fig:select_bit} for reference.
+Now that we've added the \textit{ILAs}, we can save the project (if asked, save additions to the constraints to the constraints file \textit{tutorial.xdc}), close the \textit{Synthesized Design}, and rerun \textbf{Synthesis}, \textbf{Implementation}, and \textbf{Generate Bitstream} to generate the final bitstream that includes the \textit{ILA}s. Open \textbf{Hardware Manager} and download the bitstream to the FPGA. Note, when selecting a bitstream to program the FPGA, you are also prompted to select a \textit{Debug probes file}. This file contains information about all of the debug cores in the design. This field should be populated automatically to the \textit{probes file} created when you generated the bitstream. See Figure~\ref{fig:select_bit} for reference.
 
 \begin{figure}[!h]
     \centering
@@ -209,7 +210,7 @@ Once the FPGA has been programmed, all debug cores should be listed under the FP
     \label{fig:ila_interface}
 \end{figure}
 
-To setup the \textit{ILA}, first we'll modify the settings, \textbf{open} the settings tab. The main setting of note for our purposes is the \textit{Trigger position in window}. This setting determines at which position within the captured data the trigger event occurs. Earlier in the tutorial we mentioned that the \textit{ILA} starts capturing data when the trigger is encountered. In reality, the \textit{ILA} continuously saves the probed data in a circular buffer buffer fashion, i.e. the newest probed data saves over the oldest data already stored. When a trigger is encountered, the \textit{ILA} stops saving probed data once enough data has been stored such that the trigger event appears in the position indicated by the \textit{Trigger position in window} setting. Leave this value at the default setting of \textbf{511}.
+To setup the \textit{ILA}, first we'll modify the settings, \textbf{open} the settings tab. The main setting of note for our purposes is the \textit{Trigger position in window}. This setting determines at which position within the captured data the trigger event occurs. Earlier in the tutorial we mentioned that the \textit{ILA} starts capturing data when the trigger is encountered. In reality, the \textit{ILA} continuously saves the probed data in a circular buffer buffer fashion, i.e. the newest probed data saves over the oldest data already stored. When a trigger is encountered, the \textit{ILA} stops saving probed data once enough data has been stored such that the trigger event appears in the position indicated by the \textit{Trigger position in window} setting. Leave this value at the default setting of \textbf{512}.
 
 Next, we focus on the \textit{Trigger} settings. Here, we setup what condition triggers a capture event. Press the 
 ~\scalerel*{\includegraphics{images/add_probe.png}}{(}~
@@ -234,13 +235,13 @@ The status bar in the lower part of the \textit{status} tab should show that the
 
 \section{ILA Core Instantiation in IP Integrator}
 \label{sec:ila_core}
-Previously in the tutorial, we covered the automated \textit{ILA} insertion flow using the \textit{Debug Wizard}. We can also insert an ILA core manually into our design. This later methodology tends to be the easier approach for signals within the IP Integrator environment. For this tutorial, we'll be inserting an ILA into our DDR-based MicroBlaze system of tutorial~3. \textbf{Open} the project from tutorial~3, or alternatively create a new project and recreate the system we designed there. \textbf{Open} the block diagram. Note, we can also mark a signal as debug in this view and use the flow present in Section~\ref{sec:mark_as_debug}. To see how this works, \textbf{right click} on the \textit{interrupt} output of the \textit{AXI Uartlite} and select \textbf{Debug}. If we save the block diagram now and close it, we can run the steps of Section~\ref{sec:mark_as_debug} to automatically insert the ILA. We won't be using that methos in this part of the tutorial. \textbf{Right click} the signal you just marked as debug and select \textbf{Clear Debug} to remove the signal from the Debug Nets list.
+Previously in the tutorial, we covered the automated \textit{ILA} insertion flow using the \textit{Debug Wizard}. We can also insert an ILA core manually into our design. This later methodology tends to be the easier approach for signals within the IP Integrator environment. For this tutorial, we'll be inserting an ILA into our DDR-based MicroBlaze system of tutorial~3. \textbf{Open} the project from tutorial~3, or alternatively create a new project and recreate the system we designed there. \textbf{Open} the block diagram. Note, we can also mark a signal as debug in this view and use the flow present in Section~\ref{sec:mark_as_debug}. To see how this works, \textbf{right click} on the \textit{interrupt} output of the \textit{AXI Uartlite} and select \textbf{Debug}. If we save the block diagram now and close it, we can run the steps of Section~\ref{sec:mark_as_debug} to automatically insert the ILA. We won't be using that method in this part of the tutorial. \textbf{Right click} the signal you just marked as debug and select \textbf{Clear Debug} to remove the signal from the Debug Nets list.
 
 Instead, we will be manually inserting an \textit{ILA}. \textbf{Right click} anywhere in the block diagram editor and select \textbf{ADD IP}. Search for and select \textit{ILA} to add a new \textit{ILA} to the project. \textbf{Double click} on the newly added \textit{ILA} to bring up its configuration window. From here, we can select between \textit{Native} and \textit{AXI} mode. The native mode has simple probes of some specified width, while the AXI mode include full AXI interfaces, which is a series of signals that implement the AXI protocol. For this section of the tutorial, we will be demonstrating the use of the AXI-based \textit{ILA}, so make sure \textbf{AXI} is selected for the \textit{Monitor Type}. Next, we can select how many probes to include. If we're using \textit{AXI} mode, we can only have a single probe (since AXI has multiple signals itself), but we can select up to 1024 individual signals in native mode. Finally, we can select the depth of the ILA; we'll leave the \textit{Sample Data Depth} at \textbf{1024} for this tutorial. See Figure~\ref{fig:ila_config} for reference. The next tab in the configuration allows us to set the parameters for each probe. The parameters for the AXI probes are deduced automatically from the design, though in native mode here is where you would select the bitwidth of each of your probes.
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=0.9\textwidth]{images/ila_config.png}
+    \includegraphics[width=0.95\textwidth]{images/ila_config.png}
     \caption{Configuration window for the ILA core}
     \label{fig:ila_config}
 \end{figure}
@@ -261,15 +262,17 @@ Close the configuration window. \textbf{Connect} the \textit{SLOT\_0\_AXI} signa
 \label{sec:hw_man2}
 Open \textbf{Hardware Manager} and program the FPGA with your newly created bitstream, making sure that the probes file is automatically selected for you as we did in Section~\ref{sec:hw_man}. In the \textit{Trigger Setup} tab, press
 ~\scalerel*{\includegraphics{images/add_probe.png}}{(}~
-button to add a new probe for a trigger event. From the list, select the AXI signal that ends in \textbf{WVALID}. Repeat this step and add the signal that endis in \textbf{WREADY}. Set the \textit{Value} field for both triggers to \textit{1 (logical one)}. These two signals correspond to the write data channel, where we expect the write data to be transmitted. The \textit{valid} signal indicates that there is valid data being transmitted, and the \textit{ready} signal indicates that the data is accepted. If we set the trigger to \textbf{global AND} by pressing the 
+button to add a new probe for a trigger event. From the list, select the AXI signal that ends in \textbf{WVALID}. Repeat this step and add the signal that ends in \textbf{WREADY}. Set the \textit{Value} field for both triggers to \textit{1 (logical one)}. These two signals correspond to the write data channel, where we expect the write data to be transmitted. The \textit{valid} signal indicates that there is valid data being transmitted, and the \textit{ready} signal indicates that the data is accepted. If we set the trigger to \textbf{global AND} by pressing the 
 ~\scalerel*{\includegraphics{images/global_trigger.png}}{(}~
 button, we will trigger on valid data transmitted. \textbf{Run} the \textit{ILA} to wait for  the trigger event.
 
-We cannot trigger the event from the switches, so we have to run an application on the MicroBlaze to trigger the \textit{ILA}. Without closing the \textit{Hardware Manager}, \textbf{Export} the Hardware and start \textbf{Vivado SDK}. Open the \textit{helloworld} application created in tutorial~3. Note, sometimes when we change the MicroBlaze system, our SDK applications fail to compile. We need to refresh the include files included in the board support package, so open an include file in the \textit{hello\_bsp} directory (\textit{xil\_printf.h} for example) and press \textbf{F5} to refresh the files; you should now be able to run the application. Open the \textit{Run Configuration} created in tutorial~3, but don't run it quite yet. Uncheck the \textbf{Program FPGA} option and then press \textbf{Apply} (See Figure~\ref{fig:run_config_program}). We don't want to reprogram the FPGA, as that will reset our ILA. Press \textbf{Run} to run the application.
+We cannot trigger the event from the switches, so we have to run an application on the MicroBlaze to trigger the \textit{ILA}. Without closing the \textit{Hardware Manager}, \textbf{Export} the Hardware and start \textbf{Vivado SDK}. Open the \textit{helloworld} application created in tutorial~3. Note, sometimes when we change the MicroBlaze system, our SDK applications fail to compile. We need to refresh the include files included in the board support package; press the \textbf{Re-generate BSP Sources} button from the \textit{system.mss} window to refresh the \textit{bsp}.
+%so open an include file in the \textit{hello\_bsp} directory (\textit{xil\_printf.h} for example) and press \textbf{F5} to refresh the files; you should now be able to run the application. 
+Open the \textit{Run Configuration} created in tutorial~3, but don't run it quite yet. Uncheck the \textbf{Program FPGA} option and then press \textbf{Apply} (See Figure~\ref{fig:run_config_program}). We don't want to reprogram the FPGA, as that will reset our ILA. Press \textbf{Run} to run the application.
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=0.9\textwidth]{images/run_config_program.png}
+    \includegraphics[width=0.95\textwidth]{images/run_config_program.png}
     \caption{Run Configuration dialog, with Program FPGA unchecked}
     \label{fig:run_config_program}
 \end{figure}
